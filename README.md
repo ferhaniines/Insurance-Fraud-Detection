@@ -48,9 +48,11 @@ insurance-fraud-detection/
 │   │   └── Original_Analysis_2023.ipynb    # Original analysis from 2023 archived as is
 │   │
 │   ├── 01_EDA.ipynb                        # Exploratory Data Analysis & Data Cleaning
-│   └── 02_Feature_Engineering.ipynb        # Feature engineering & preprocessing
+│   ├── 02_Feature_Engineering.ipynb        # Feature engineering & preprocessing
+│   └── 03_Modelling.ipynb                  # Modelling of processed feature files
 │
-└── README.md
+├── README.md
+└── requirements.txt
 ```
 ---
 
