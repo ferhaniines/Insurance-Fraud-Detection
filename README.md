@@ -26,7 +26,7 @@ The dataset contains 1,000 insurance claims with a mix of:
  
 ## 📅 Project History
  
-This project was originally completed in 2022 as part of a self-directed learning exercise. In 2025, it was revisited and substantially revised to address limitations identified with additional experience: train/test leakage in the ML evaluation, incomplete numerical analysis, and the absence of class imbalance handling. The original notebook is preserved in `Notebooks/Legacy/` for transparency.
+This project was originally completed in 2023 as part of a self-directed learning exercise. In 2026, it was revisited and substantially revised to address limitations identified with additional experience: train/test leakage in the ML evaluation, incomplete numerical analysis, and the absence of class imbalance handling. The original notebook is preserved in `Notebooks/Legacy/` for transparency.
 
 ---
 
