@@ -1,24 +1,40 @@
+from math import nan
+
 from sklearn.base import OneToOneFeatureMixin, TransformerMixin, BaseEstimator
 from sklearn.preprocessing import FunctionTransformer
 import numpy as np
+import pandas as pd
 
-
+def get_numpy_version():
+    print(f"Numpy version: {np.__version__}")
 class RandomImputer (OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
     
     def __init__(self, nan_value=None, random_state=None):
-        self.nan_value = nan_value
-        self.random_state = random_state
-    
-    def values_counts(self, x):
-        
-        unique, counts = np.unique(x, return_counts=True)
-        
-        if self.nan_value is not None:
-            nan_value_mask = (unique == self.nan_value)
+        if nan_value is None :
+            self.nan_value = ['nan']
+        elif isinstance(nan_value, str) and nan_value.lower() == 'nan':
+            self.nan_value = [nan_value]
+        elif isinstance(nan_value, str):
+            self.nan_value = [nan_value, 'nan']
+        elif isinstance(nan_value, list):
+            self.nan_value = nan_value + ['nan']
+        elif isinstance(nan_value, list) and 'nan' in nan_value:
+            self.nan_value = nan_value
+            
+        if random_state is None:
+            self.random_state = None
+        elif isinstance(random_state, int):
+            self.random_state = random_state
         else:
-            nan_value_mask = np.zeros_like(unique, dtype=bool)
+            raise ValueError("random_state should be an integer or None.")
     
-        na_mask = (unique != unique) | nan_value_mask
+    def values_counts(self, X):
+        
+        unique, counts = np.unique(X, return_counts=True)
+        
+        nan_value_mask = np.isin(unique, self.nan_value)
+        
+        na_mask = (unique != unique) | (unique == None) | nan_value_mask
         
         indexes = np.argwhere(na_mask).squeeze()
                 
@@ -29,6 +45,7 @@ class RandomImputer (OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
             unique_clean = unique
             counts_clean = counts
         
+        self.unique_.append(unique_clean)
         self.weights_.append(counts_clean / counts_clean.sum())
     
     def fit(self, X, y=None):
@@ -36,38 +53,66 @@ class RandomImputer (OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
         self.unique_ = []
         self.weights_ = []
         
-        X_ = np.array(X, copy=True, dtype=object)
+        if isinstance(X, (pd.DataFrame, pd.Series)):
+            shape = X.shape
+            if len(shape) == 1: 
+                n_cols = 1
+            else:
+                n_cols = shape[1]
+            X_ = np.array(X, copy=True, dtype=np.str_)
+        else:
+            shape = X.shape
+            if len(shape) == 1: 
+                n_cols = 1
+            else:
+                n_cols = shape[1]
+            X_ = np.array(X, copy=True, dtype=np.str_)
         
-        n_cols = X_.shape[1]
+        if n_cols == 1:
+            self.values_counts(X_.squeeze())
+            return self
         
         for col in range(n_cols):
             self.values_counts(X_[:, col])
-            
-            if self.nan_value is not None:
-                nan_value_mask = (X_[:, col] == self.nan_value)
-            else:
-                nan_value_mask = True        
         return self
     
     def transform(self, X, y=None):
         
-        X_ = np.array(X, copy=True, dtype=object)
-        
-        n_cols = X_.shape[1]
-        
-        for col in range(n_cols):
-            
-            if self.nan_value is not None:
-                nan_value_mask = (X_[:, col] == self.nan_value)
+        if isinstance(X, (pd.DataFrame, pd.Series)):
+            shape = X.shape
+            if len(shape) == 1: 
+                n_cols = 1
             else:
-                nan_value_mask = True
+                n_cols = shape[1]
+            X_ = np.array(X, copy=True, dtype=np.str_)
+        else:
+            shape = X.shape
+            if len(shape) == 1: 
+                n_cols = 1
+            else:
+                n_cols = shape[1]
+            X_ = np.array(X, copy=True, dtype=np.str_)
+        
+        rng = np.random.default_rng(self.random_state)
+        
+        if n_cols == 1:
+            X_ = X_.squeeze()
+            nan_value_mask = np.isin(X_, self.nan_value)
             
-            na_mask = (X_[:, col] != X_[:, col]) | nan_value_mask
-            
-            np.random.seed(self.random_state)
+            na_mask = (X_ != X_) | (X_ == None) | nan_value_mask
             
             if na_mask.sum() > 0:
-                X_[na_mask, col] = np.random.choice(self.unique_[col], size=na_mask.sum(), p=self.weights_[col])
+                X_[na_mask] = rng.choice(self.unique_[0], size=na_mask.sum(), p=self.weights_[0])
+            return X_
+            
+        for col in range(n_cols):
+            
+            nan_value_mask = np.isin(X_[:, col], self.nan_value)
+            
+            na_mask = (X_[:, col] != X_[:, col]) | (X_[:, col] == None) | nan_value_mask
+            
+            if na_mask.sum() > 0:
+                X_[na_mask, col] = rng.choice(self.unique_[col], size=na_mask.sum(), p=self.weights_[col])
         return X_
 
 def clean_authorities_contacted(X):
